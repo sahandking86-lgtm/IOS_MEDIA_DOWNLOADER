@@ -20,11 +20,11 @@ packages:
   PythonKit:
     url: https://github.com/pvieito/PythonKit.git
     branch: main
-  # Swift wrapper around a statically-built FFmpeg for iOS, used for
-  # muxing separate video/audio streams and audio extraction.
-  ffmpeg-kit-ios:
-    url: https://github.com/arthenica/ffmpeg-kit.git
-    exactVersion: 6.0
+  # NOTE: arthenica/ffmpeg-kit isn't distributed via Swift Package Manager
+  # (no Package.swift in that repo — it ships via CocoaPods/Maven/npm only),
+  # so it's been removed here. FFmpegService.swift is already stubbed to
+  # reflect that FFmpeg isn't linked yet; see README.md for SPM-compatible
+  # alternatives (e.g. kewlbear/FFmpeg-iOS) to wire in later.
 
 targets:
   VideoDownloader:
@@ -36,8 +36,6 @@ targets:
       - path: Resources
     dependencies:
       - package: PythonKit
-      - package: ffmpeg-kit-ios
-        product: ffmpegkit
     info:
       path: Resources/Info.plist
       properties:
