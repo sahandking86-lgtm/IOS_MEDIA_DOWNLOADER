@@ -1,0 +1,64 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Resolve Swift package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project VideoDownloader.xcodeproj \
+            -scheme VideoDownloader
+
+      # Placeholder — download/unpack your Python-Apple-support xcframework
+      # and the yt-dlp source tree here before the archive step, e.g.:
+      #   curl -L -o python.tar.gz <python-apple-support release url>
+      #   tar -xzf python.tar.gz -C Frameworks/
+      #   pip download yt-dlp --no-deps -d Resources/ytdlp-site-packages
+      # See README.md "Native yt-dlp engine" for the full recipe.
+      - name: Fetch embedded Python + yt-dlp payload
+        run: echo "TODO: populate Frameworks/Python.xcframework and Resources/ytdlp-site-packages"
+
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild archive \
+            -project VideoDownloader.xcodeproj \
+            -scheme VideoDownloader \
+            -configuration Release \
+            -archivePath build/VideoDownloader.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | xcpretty || true
+
+      - name: Package .ipa from the archive
+        run: |
+          mkdir -p build/Payload
+          cp -R "build/VideoDownloader.xcarchive/Products/Applications/VideoDownloader.app" build/Payload/
+          cd build && zip -r VideoDownloader.ipa Payload
+
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoDownloader-ipa
+          path: build/VideoDownloader.ipa
+          retention-days: 14
