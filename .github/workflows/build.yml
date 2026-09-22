@@ -35,7 +35,7 @@ jobs:
       #   pip download yt-dlp --no-deps -d Resources/ytdlp-site-packages
       # See README.md "Native yt-dlp engine" for the full recipe.
       - name: Fetch embedded Python + yt-dlp payload
-        run: echo "TODO: populate Frameworks/Python.xcframework and Resources/ytdlp-site-packages"
+        run: echo "TODO - populate Frameworks/Python.xcframework and Resources/ytdlp-site-packages"
 
       - name: Archive (unsigned)
         run: |
