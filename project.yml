@@ -1,0 +1,54 @@
+name: VideoDownloader
+options:
+  bundleIdPrefix: com.enderwoman.videodownloader
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_BITCODE: NO
+
+packages:
+  # Bridges CPython into Swift so the bundled yt-dlp (pure Python) can run
+  # natively on-device. See README.md "Native yt-dlp engine" for setup.
+  PythonKit:
+    url: https://github.com/pvieito/PythonKit.git
+    branch: master
+  # Swift wrapper around a statically-built FFmpeg for iOS, used for
+  # muxing separate video/audio streams and audio extraction.
+  ffmpeg-kit-ios:
+    url: https://github.com/arthenica/ffmpeg-kit.git
+    exactVersion: 6.0
+
+targets:
+  VideoDownloader:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    resources:
+      - path: Resources
+    dependencies:
+      - package: PythonKit
+      - package: ffmpeg-kit-ios
+        product: ffmpegkit
+    info:
+      path: Resources/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportsDocumentBrowser: true
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSPhotoLibraryAddUsageDescription: "Used to save downloaded videos to your Photos library when you choose to export them."
+        LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
+    entitlements:
+      path: Resources/VideoDownloader.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
