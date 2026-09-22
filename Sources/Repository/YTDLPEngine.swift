@@ -114,13 +114,13 @@ actor YTDLPEngine: DownloadEngine {
             }
 
             let options: PythonObject = [
-                "format": format.id,
-                "outtmpl": outputTemplate,
+                "format": PythonObject(format.id),
+                "outtmpl": PythonObject(outputTemplate),
                 "quiet": true,
                 "no_warnings": true,
-                "progress_hooks": [progressHook],
+                "progress_hooks": PythonObject([PythonObject(progressHook)]),
                 "merge_output_format": "mp4",
-                "ffmpeg_location": FFmpegService.binaryPath,
+                "ffmpeg_location": PythonObject(FFmpegService.binaryPath),
             ]
 
             let extractor = ytdlp.YoutubeDL(options)
