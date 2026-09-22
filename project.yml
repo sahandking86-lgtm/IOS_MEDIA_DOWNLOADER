@@ -19,7 +19,7 @@ packages:
   # natively on-device. See README.md "Native yt-dlp engine" for setup.
   PythonKit:
     url: https://github.com/pvieito/PythonKit.git
-    branch: master
+    branch: main
   # Swift wrapper around a statically-built FFmpeg for iOS, used for
   # muxing separate video/audio streams and audio extraction.
   ffmpeg-kit-ios:
