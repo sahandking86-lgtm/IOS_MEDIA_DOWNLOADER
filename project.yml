@@ -39,15 +39,18 @@ targets:
       - framework: Frameworks/Python.xcframework
         embed: true
     postbuildScripts:
-      - name: Install Python Runtime
-        # Official BeeWare install step — copies the correct architecture's
-        # Python standard library into the app bundle at build time. Must
-        # run with dependency analysis off since it writes straight into
-        # the product folder rather than declared outputs.
+      - name: Install Python Standard Library
+        # Modern Python-Apple-support releases (Python 3.13+ / PEP 730
+        # packaging) ship the pure-Python standard library once, at
+        # Python.xcframework/lib — separate from the compiled per-platform
+        # framework slices, which Xcode already embeds automatically via
+        # the `embed: true` framework dependency above. This copies that
+        # shared lib/ folder into the app bundle so PYTHONHOME (set in
+        # YTDLPEngine.swift) can find it at runtime.
         script: |
           set -e
-          source "$PROJECT_DIR/Frameworks/Python.xcframework/build/build_utils.sh"
-          install_python Frameworks/Python.xcframework app
+          mkdir -p "${CODESIGNING_FOLDER_PATH}/python"
+          rsync -a --delete "$PROJECT_DIR/Frameworks/Python.xcframework/lib" "${CODESIGNING_FOLDER_PATH}/python/"
         basedOnDependencyAnalysis: false
     info:
       path: Resources/Info.plist
