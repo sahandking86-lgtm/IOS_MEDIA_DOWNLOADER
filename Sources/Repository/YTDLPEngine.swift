@@ -20,6 +20,16 @@ actor YTDLPEngine: DownloadEngine {
     private let ffmpeg = FFmpegService()
 
     private static let bootstrapped: Bool = {
+        // The BeeWare install_python script (run as an Xcode build phase —
+        // see project.yml) copies the platform's Python standard library to
+        // <app bundle>/python/lib/pythonX.Y. Setting PYTHONHOME lets CPython
+        // find it; this must happen before any other PythonKit call.
+        let pythonHome = Bundle.main.bundlePath + "/python"
+        guard FileManager.default.fileExists(atPath: pythonHome) else {
+            return false
+        }
+        setenv("PYTHONHOME", pythonHome, 1)
+
         guard let resourcePath = Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil) else {
             return false
         }
