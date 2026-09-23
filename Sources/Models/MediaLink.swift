@@ -1,6 +1,6 @@
 import Foundation
 
-enum SourcePlatform: String, Codable {
+enum SourcePlatform: String, Codable, Hashable {
     case youtube, tiktok, facebook, instagram, twitter, unknown
 
     var displayName: String {
