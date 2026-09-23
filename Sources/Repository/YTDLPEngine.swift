@@ -40,7 +40,7 @@ actor YTDLPEngine: DownloadEngine {
             "skip_download": true,
         ]
 
-        return try Task.detached(priority: .userInitiated) {
+        return try await Task.detached(priority: .userInitiated) {
             let extractor = ytdlp.YoutubeDL(options)
             let info = try extractor.extract_info.dynamicallyCall(
                 withKeywordArguments: ["url": link.url.absoluteString, "download": false]
@@ -101,7 +101,7 @@ actor YTDLPEngine: DownloadEngine {
         return try await Task.detached(priority: .userInitiated) { [weak self] in
             let ytdlp = Python.import("yt_dlp")
 
-            let progressHook = PythonInstanceMethod { args in
+            let progressHook = PythonFunction { (args: [PythonObject]) -> PythonConvertible in
                 guard let status = args.first else { return Python.None }
                 let state = String(status["status"]) ?? ""
                 if state == "downloading" {
