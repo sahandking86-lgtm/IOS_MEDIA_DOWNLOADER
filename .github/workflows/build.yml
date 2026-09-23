@@ -28,12 +28,25 @@ jobs:
           PY_URL=$(curl -s https://api.github.com/repos/beeware/Python-Apple-support/releases \
             | grep -o 'https://github.com/beeware/Python-Apple-support/releases/download/3\.11-[^"]*iOS-support[^"]*\.tar\.gz' \
             | head -n 1)
-          echo "Using $PY_URL"
+          echo "Resolved URL: $PY_URL"
+
+          if [ -z "$PY_URL" ]; then
+            echo "::error::Could not find a matching Python-Apple-support iOS release asset — the release naming may have changed."
+            exit 1
+          fi
 
           curl -L -o python-ios-support.tar.gz "$PY_URL"
           mkdir -p Frameworks
           tar -xzf python-ios-support.tar.gz -C Frameworks
-          ls Frameworks
+
+          echo "Extracted tree (first 40 files):"
+          find Frameworks -maxdepth 4 -type f | sed -n '1,40p'
+
+          if [ ! -f "Frameworks/Python.xcframework/build/build_utils.sh" ]; then
+            echo "::error::build_utils.sh not found at Frameworks/Python.xcframework/build/build_utils.sh — release layout may differ from what project.yml expects. See the file list printed above."
+            exit 1
+          fi
+          echo "build_utils.sh confirmed present."
 
           echo "Downloading yt-dlp..."
           mkdir -p Resources/ytdlp-site-packages
