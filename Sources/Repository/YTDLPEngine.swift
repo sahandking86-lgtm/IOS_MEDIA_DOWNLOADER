@@ -51,33 +51,32 @@ actor YTDLPEngine: DownloadEngine {
             let duration = Int(info["duration"])
 
             var formats: [VideoFormat] = []
-            if let rawFormats = Array(info["formats"]) {
-                for raw in rawFormats {
-                    guard let id = String(raw["format_id"]) else { continue }
-                    let hasVideo = raw["vcodec"] != Python.None && String(raw["vcodec"]) != "none"
-                    let hasAudio = raw["acodec"] != Python.None && String(raw["acodec"]) != "none"
-                    let height = Int(raw["height"])
-                    let abr = Double(raw["abr"])
-                    let sizeMB = Double(raw["filesize"]).map { $0 / 1_048_576 }
-                    let ext = String(raw["ext"]) ?? "mp4"
+            let rawFormats = Array(info["formats"])
+            for raw in rawFormats {
+                guard let id = String(raw["format_id"]) else { continue }
+                let hasVideo = raw["vcodec"] != Python.None && String(raw["vcodec"]) != "none"
+                let hasAudio = raw["acodec"] != Python.None && String(raw["acodec"]) != "none"
+                let height = Int(raw["height"])
+                let abr = Double(raw["abr"])
+                let sizeMB = Double(raw["filesize"]).map { $0 / 1_048_576 }
+                let ext = String(raw["ext"]) ?? "mp4"
 
-                    let label: String
-                    if hasVideo {
-                        label = height.map { "\($0)p" } ?? "Video · \(ext)"
-                    } else if hasAudio {
-                        label = abr.map { "Audio · \(Int($0)) kbps" } ?? "Audio · \(ext)"
-                    } else {
-                        continue
-                    }
-
-                    formats.append(VideoFormat(
-                        id: id,
-                        label: label,
-                        isAudioOnly: hasAudio && !hasVideo,
-                        approxSizeMB: sizeMB,
-                        ext: ext
-                    ))
+                let label: String
+                if hasVideo {
+                    label = height.map { "\($0)p" } ?? "Video · \(ext)"
+                } else if hasAudio {
+                    label = abr.map { "Audio · \(Int($0)) kbps" } ?? "Audio · \(ext)"
+                } else {
+                    continue
                 }
+
+                formats.append(VideoFormat(
+                    id: id,
+                    label: label,
+                    isAudioOnly: hasAudio && !hasVideo,
+                    approxSizeMB: sizeMB,
+                    ext: ext
+                ))
             }
 
             return ProbedMedia(link: link, title: title, thumbnailURL: thumbnail,
