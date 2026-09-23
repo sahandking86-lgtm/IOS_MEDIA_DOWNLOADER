@@ -17,7 +17,7 @@ protocol DownloadEngine: Sendable {
         onProgress: @escaping @Sendable (Double, String?) -> Void
     ) async throws -> URL
 
-    func cancel(_ link: MediaLink)
+    func cancel(_ link: MediaLink) async
 }
 
 enum DownloadEngineError: LocalizedError {
