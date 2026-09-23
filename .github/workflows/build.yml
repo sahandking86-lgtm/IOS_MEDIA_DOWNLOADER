@@ -16,6 +16,29 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
+      # Downloads BeeWare's official iOS-compiled Python runtime and yt-dlp's
+      # pure-Python source, before the Xcode project even exists, so the
+      # Frameworks/ path XcodeGen and the archive step both reference is
+      # already in place. See README.md "Native yt-dlp engine".
+      - name: Fetch embedded Python + yt-dlp payload
+        run: |
+          set -e
+
+          echo "Locating latest Python 3.11 iOS runtime release..."
+          PY_URL=$(curl -s https://api.github.com/repos/beeware/Python-Apple-support/releases \
+            | grep -o 'https://github.com/beeware/Python-Apple-support/releases/download/3\.11-[^"]*iOS-support[^"]*\.tar\.gz' \
+            | head -n 1)
+          echo "Using $PY_URL"
+
+          curl -L -o python-ios-support.tar.gz "$PY_URL"
+          mkdir -p Frameworks
+          tar -xzf python-ios-support.tar.gz -C Frameworks
+          ls Frameworks
+
+          echo "Downloading yt-dlp..."
+          mkdir -p Resources/ytdlp-site-packages
+          python3 -m pip install --quiet --target Resources/ytdlp-site-packages yt-dlp --no-deps
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -27,15 +50,6 @@ jobs:
           xcodebuild -resolvePackageDependencies \
             -project VideoDownloader.xcodeproj \
             -scheme VideoDownloader
-
-      # Placeholder — download/unpack your Python-Apple-support xcframework
-      # and the yt-dlp source tree here before the archive step, e.g.:
-      #   curl -L -o python.tar.gz <python-apple-support release url>
-      #   tar -xzf python.tar.gz -C Frameworks/
-      #   pip download yt-dlp --no-deps -d Resources/ytdlp-site-packages
-      # See README.md "Native yt-dlp engine" for the full recipe.
-      - name: Fetch embedded Python + yt-dlp payload
-        run: echo "TODO - populate Frameworks/Python.xcframework and Resources/ytdlp-site-packages"
 
       - name: Archive (unsigned)
         run: |
