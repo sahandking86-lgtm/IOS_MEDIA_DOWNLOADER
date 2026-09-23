@@ -41,14 +41,14 @@ jobs:
           mkdir -p Frameworks
           tar -xzf python-ios-support.tar.gz -C Frameworks
 
-          echo "Extracted tree (first 40 files):"
-          find Frameworks -maxdepth 4 -type f | sed -n '1,40p'
+          echo "Top-level extracted structure:"
+          find Frameworks -maxdepth 2 -mindepth 1 | sort
 
-          if [ ! -f "Frameworks/Python.xcframework/build/build_utils.sh" ]; then
-            echo "::error::build_utils.sh not found at Frameworks/Python.xcframework/build/build_utils.sh — release layout may differ from what project.yml expects. See the file list printed above."
+          if [ ! -d "Frameworks/Python.xcframework/lib" ]; then
+            echo "::error::Frameworks/Python.xcframework/lib not found after extraction — see structure printed above."
             exit 1
           fi
-          echo "build_utils.sh confirmed present."
+          echo "Python stdlib lib/ folder confirmed present."
 
           echo "Downloading yt-dlp..."
           mkdir -p Resources/ytdlp-site-packages
