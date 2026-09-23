@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum SaveDestination: String, CaseIterable, Identifiable, Codable {
+enum SaveDestination: String, CaseIterable, Identifiable, Codable, Hashable {
     case documentsOnly, documentsAndPhotos
     var id: String { rawValue }
 
