@@ -41,7 +41,7 @@ final class QueueViewModel {
     }
 
     func cancel(_ item: DownloadItem) {
-        engine.cancel(item.link) // actor call is async but fire-and-forget is fine for a cancel signal
+        Task { await engine.cancel(item.link) }
         item.status = .cancelled
         HapticManager.warning()
     }
