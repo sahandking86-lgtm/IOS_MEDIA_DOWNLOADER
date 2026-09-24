@@ -35,22 +35,29 @@ actor YTDLPEngine: DownloadEngine {
         }
         setenv("PYTHONHOME", pythonHome, 1)
 
-        // Try both a flat top-level location and nested under Resources/,
-        // since it's unclear yet which one XcodeGen actually produces.
-        let candidates = [
-            Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil),
-            Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil, inDirectory: "Resources"),
-        ].compactMap { $0 }
+        // Copied directly into the bundle root by a postbuildScript (see
+        // project.yml) rather than relying on Xcode's resource bundling,
+        // which wasn't reliably including this folder.
+        let resourcePath = bundlePath + "/ytdlp-site-packages"
+        let resourceExists = FileManager.default.fileExists(atPath: resourcePath)
+        lines.append("ytdlp-site-packages/ exists: \(resourceExists)")
 
-        guard let resourcePath = candidates.first else {
-            let resourcesPath = bundlePath + "/Resources"
-            let resourcesContents = (try? FileManager.default.contentsOfDirectory(atPath: resourcesPath))?.sorted() ?? []
-            lines.append("Resources/ contents: \(resourcesContents.joined(separator: ", "))")
+        guard resourceExists else {
             return "MISSING ytdlp-site-packages — " + lines.joined(separator: " | ")
         }
 
-        let sys = Python.import("sys")
-        sys.path.append(resourcePath)
+        // PythonKit's `Python.import(_:)` is throwing in the current
+        // release (`try Python.import("sys")` per its own README) — used
+        // without `try` it silently falls back to a legacy variant that
+        // crashes the whole process on failure instead of raising a
+        // catchable error. Using `try`/`do`/`catch` here turns that crash
+        // into a readable message in this diagnostic string instead.
+        do {
+            let sys = try Python.import("sys")
+            sys.path.append(resourcePath)
+        } catch {
+            return "PYTHON IMPORT FAILED (sys) — \(error) | " + lines.joined(separator: " | ")
+        }
         return "OK"
     }()
 
@@ -61,7 +68,12 @@ actor YTDLPEngine: DownloadEngine {
             throw DownloadEngineError.extractionFailed(Self.bootstrapStatus)
         }
 
-        let ytdlp = Python.import("yt_dlp")
+        let ytdlp: PythonObject
+        do {
+            ytdlp = try Python.import("yt_dlp")
+        } catch {
+            throw DownloadEngineError.extractionFailed("yt_dlp import failed: \(error)")
+        }
         let options: PythonObject = [
             "quiet": true,
             "no_warnings": true,
@@ -126,7 +138,7 @@ actor YTDLPEngine: DownloadEngine {
         let outputTemplate = destinationDir.appendingPathComponent("%(title)s.%(ext)s").path
 
         return try await Task.detached(priority: .userInitiated) { [weak self] in
-            let ytdlp = Python.import("yt_dlp")
+            let ytdlp = try Python.import("yt_dlp")
 
             let progressHook = PythonFunction { (args: [PythonObject]) -> PythonConvertible in
                 guard let status = args.first else { return Python.None }
