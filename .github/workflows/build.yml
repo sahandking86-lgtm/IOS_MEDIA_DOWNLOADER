@@ -51,8 +51,8 @@ jobs:
           echo "Python stdlib lib/ folder confirmed present."
 
           echo "Downloading yt-dlp..."
-          mkdir -p Resources/ytdlp-site-packages
-          python3 -m pip install --quiet --target Resources/ytdlp-site-packages yt-dlp --no-deps
+          mkdir -p PythonPackages/ytdlp-site-packages
+          python3 -m pip install --quiet --target PythonPackages/ytdlp-site-packages yt-dlp --no-deps
 
       - name: Install XcodeGen
         run: brew install xcodegen
