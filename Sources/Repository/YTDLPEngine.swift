@@ -4,43 +4,61 @@ import PythonKit
 /// Runs the bundled yt-dlp (pure-Python) inside an embedded CPython runtime
 /// via PythonKit, off the main thread, behind an actor so all Python calls
 /// are serialized (CPython's GIL makes concurrent calls unsafe anyway).
-///
-/// Setup this relies on (see README.md "Native yt-dlp engine"):
-///   1. Python.xcframework embedded in the app bundle (e.g. via
-///      https://github.com/beeware/Python-Apple-support) and
-///      PYTHONHOME pointed at its Resources/lib/python3.x.
-///   2. yt-dlp's pure-Python source tree bundled as an app resource and
-///      added to `sys.path` at launch (`Resources/ytdlp-site-packages`).
-///   3. FFmpegKit (via FFmpegService) available on PATH-equivalent so
-///      yt-dlp's postprocessors can shell out to it for muxing.
 actor YTDLPEngine: DownloadEngine {
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
     private var cancelledLinks: Set<UUID> = []
     private let ffmpeg = FFmpegService()
 
-    private static let bootstrapped: Bool = {
-        // The BeeWare install_python script (run as an Xcode build phase —
-        // see project.yml) copies the platform's Python standard library to
-        // <app bundle>/python/lib/pythonX.Y. Setting PYTHONHOME lets CPython
-        // find it; this must happen before any other PythonKit call.
-        let pythonHome = Bundle.main.bundlePath + "/python"
-        guard FileManager.default.fileExists(atPath: pythonHome) else {
-            return false
+    /// Replaces the plain Bool bootstrap check: on failure this carries a
+    /// human-readable dump of what's actually inside the app bundle, which
+    /// gets threaded through to the on-screen error toast. There's no way
+    /// to attach an Xcode console to a sideloaded/LiveContainer install, so
+    /// this is the only debugging channel available — make it count.
+    private static let bootstrapStatus: String = {
+        let bundlePath = Bundle.main.bundlePath
+        var lines: [String] = ["bundle: \(bundlePath)"]
+
+        let topLevel = (try? FileManager.default.contentsOfDirectory(atPath: bundlePath))?.sorted() ?? []
+        lines.append("top-level (\(topLevel.count)): \(topLevel.joined(separator: ", "))")
+
+        let pythonHome = bundlePath + "/python"
+        let pythonExists = FileManager.default.fileExists(atPath: pythonHome)
+        lines.append("python/ exists: \(pythonExists)")
+        if pythonExists {
+            let pythonContents = (try? FileManager.default.contentsOfDirectory(atPath: pythonHome))?.sorted() ?? []
+            lines.append("python/ contents: \(pythonContents.joined(separator: ", "))")
+        }
+
+        guard pythonExists else {
+            return "MISSING python/ — " + lines.joined(separator: " | ")
         }
         setenv("PYTHONHOME", pythonHome, 1)
 
-        guard let resourcePath = Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil) else {
-            return false
+        // Try both a flat top-level location and nested under Resources/,
+        // since it's unclear yet which one XcodeGen actually produces.
+        let candidates = [
+            Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil),
+            Bundle.main.path(forResource: "ytdlp-site-packages", ofType: nil, inDirectory: "Resources"),
+        ].compactMap { $0 }
+
+        guard let resourcePath = candidates.first else {
+            let resourcesPath = bundlePath + "/Resources"
+            let resourcesContents = (try? FileManager.default.contentsOfDirectory(atPath: resourcesPath))?.sorted() ?? []
+            lines.append("Resources/ contents: \(resourcesContents.joined(separator: ", "))")
+            return "MISSING ytdlp-site-packages — " + lines.joined(separator: " | ")
         }
+
         let sys = Python.import("sys")
         sys.path.append(resourcePath)
-        return true
+        return "OK"
     }()
+
+    private static var bootstrapped: Bool { bootstrapStatus == "OK" }
 
     func probe(_ link: MediaLink) async throws -> ProbedMedia {
         guard Self.bootstrapped else {
-            throw DownloadEngineError.extractionFailed("yt-dlp runtime isn't bundled in this build.")
+            throw DownloadEngineError.extractionFailed(Self.bootstrapStatus)
         }
 
         let ytdlp = Python.import("yt_dlp")
@@ -100,7 +118,7 @@ actor YTDLPEngine: DownloadEngine {
         onProgress: @escaping @Sendable (Double, String?) -> Void
     ) async throws -> URL {
         guard Self.bootstrapped else {
-            throw DownloadEngineError.extractionFailed("yt-dlp runtime isn't bundled in this build.")
+            throw DownloadEngineError.extractionFailed(Self.bootstrapStatus)
         }
         cancelledLinks.remove(link.id)
 
