@@ -52,6 +52,17 @@ targets:
           mkdir -p "${CODESIGNING_FOLDER_PATH}/python"
           rsync -a --delete "$PROJECT_DIR/Frameworks/Python.xcframework/lib" "${CODESIGNING_FOLDER_PATH}/python/"
         basedOnDependencyAnalysis: false
+      - name: Install yt-dlp Package
+        # Copied directly via rsync rather than declared as a XcodeGen
+        # `resources:` entry — the generic Resources/ folder reference
+        # wasn't reliably bundling this (confirmed missing from the built
+        # app on-device), likely conflicting with Resources/Info.plist
+        # also being used to generate the target's Info.plist. This uses
+        # the same proven direct-copy approach as the Python stdlib above.
+        script: |
+          set -e
+          rsync -a --delete "$PROJECT_DIR/PythonPackages/ytdlp-site-packages" "${CODESIGNING_FOLDER_PATH}/"
+        basedOnDependencyAnalysis: false
     info:
       path: Resources/Info.plist
       properties:
