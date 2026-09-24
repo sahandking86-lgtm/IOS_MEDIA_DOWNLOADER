@@ -21,13 +21,18 @@ jobs:
       # Frameworks/ path XcodeGen and the archive step both reference is
       # already in place. See README.md "Native yt-dlp engine".
       - name: Fetch embedded Python + yt-dlp payload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
           command -v jq >/dev/null || brew install jq
 
           echo "Locating a Python iOS runtime release..."
-          PY_URL=$(curl -fsSL https://api.github.com/repos/beeware/Python-Apple-support/releases \
+          PY_URL=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/beeware/Python-Apple-support/releases \
             | jq -r '[.[] | .assets[]? | select(.name | test("(?i)ios.*\\.tar\\.gz$")) | .browser_download_url] | .[0] // empty')
 
           if [ -z "$PY_URL" ]; then
